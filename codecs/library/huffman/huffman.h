@@ -29,17 +29,31 @@ namespace Codecs {
         void DFS(const std::vector<node> &tree, vector<std::vector<bool>> &out, std::vector<bool> code, node pos) {
             if (!pos.left && !pos.right) {
                 out[pos.value] = code;
-                std::cout << pos.value << '\n';
-                for (bool bit : code) {
-                    std::cout << bit;
-                }
-                std::cout << "\n\n";
             } else {
                 std::vector<bool> new_code = code;
                 new_code.push_back(false);
                 DFS(tree, out, new_code, tree[pos.left]);
                 *(new_code.end() - 1) = true;
                 DFS(tree, out, new_code, tree[pos.right]);
+            }
+        }
+
+        std::vector<bool> find_wrong_code(const std::vector<node> &tree, node pos, std::vector<bool> code, long long layer) const {
+            if (layer < 0 || (!pos.left && !pos.right)) {
+                return std::vector<bool>();
+            }
+            if (!layer) {
+                return code;
+            } else {
+                std::vector<bool> out;
+                std::vector<bool> new_code = code;
+                new_code.push_back(false);
+                out = find_wrong_code(tree, tree[pos.left], new_code, layer - 1);
+                if (!out.size()) {
+                    *(new_code.end() - 1) = true;
+                    out = find_wrong_code(tree, tree[pos.right], new_code, layer - 1);
+                }
+                return out;
             }
         }
 
@@ -85,10 +99,11 @@ namespace Codecs {
                 }
             }
 
-            void push_back(const std::vector<bool> &code) {
+            unsigned push_back(const std::vector<bool> &code) {
                 for (bool bit : code) {
                     push_back(bit);
                 }
+                return bits;
             }
 
             std::string getvalue() const {
@@ -96,20 +111,34 @@ namespace Codecs {
             }
         };
 
+    private:
+        friend class BitStr;
+
+    public:
+
         void encode(string &encoded, const string &raw) const {
             BitStr out;
-            for (char c : raw) {
-                out.push_back(codes[static_cast<unsigned char>(c)]);
-                //std::cout << codes[static_cast<unsigned char>(c)][0] << '\n';
+            for (size_t i = 0; i < raw.size(); ++i) {
+                unsigned bits = out.push_back(codes[static_cast<unsigned char>(raw[i])]);
+
+                if (i + 1 == raw.size() && bits) {
+                    std::vector<bool> fake_code = find_wrong_code(tree, tree[0], std::vector<bool>(), bits);
+                    out.push_back(fake_code);
+                }
+
             }
             encoded = out.getvalue();
         }
 
         void decode(string &raw, const string &encoded) const {
             node position = tree[0];
-            std::bitset<8> code;
-            for (unsigned char c : encoded) {
-                code = c;
+            std::vector<bool> code(8);
+            for (char c : encoded) {
+                auto symbol = static_cast<unsigned char>(c);
+                for (int j = 7; j >= 0; --j) {
+                    code[j] = symbol % 2;
+                    symbol /= 2;
+                }
                 for (unsigned i = 0; i < 8; ++i) {
                     if (code[i]) {
                         position = tree[position.right];
@@ -125,10 +154,10 @@ namespace Codecs {
         }
 
         string save() const {
-            return string();
+            return std::string();
         }
 
-        void load(const string&) {}
+        void load(const string &) { }
 
         size_t sample_size(size_t) const {
             return 10000;
@@ -147,7 +176,7 @@ namespace Codecs {
             }
 
             for (auto It = samplevector.begin(); It != samplevector.end(); ++It) {
-                for (auto It_s = It -> begin(); It_s != It -> end(); ++It_s) {
+                for (auto It_s = It->begin(); It_s != It->end(); ++It_s) {
                     unsigned char letter = static_cast<unsigned char>(*It_s);
                     tree[letter + 1].frequency += 1;
                 }
@@ -166,24 +195,15 @@ namespace Codecs {
                 new_node.left = first_node.pos;
                 new_node.right = second_node.pos;
                 new_node.frequency = first_node.frequency + second_node.frequency;
-                std::cout << new_node.frequency << ' ' << new_node.left << ' ' << new_node.right << '\n';
+                new_node.pos = tree.size();
                 tree.push_back(new_node);
+                q.push(new_node);
             }
             tree[0] = q.top();
-            std::cout << tree[0].left << ' ' << tree[0].right << ' ' << tree[0].value << '\n';
             codes = std::vector<std::vector<bool>>(256, std::vector<bool>());
             DFS(tree, codes, std::vector<bool>(), tree[0]);
-            for (std::vector<bool> code : codes) {
-                if (code.size()) {
-                    for (auto bit : code) {
-                        std::cout << bit;
-                    }
-                    std::cout << '\n';
-                }
-            }
         }
 
         void reset() {}
     };
-
 }

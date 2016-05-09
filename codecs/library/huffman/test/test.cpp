@@ -18,10 +18,9 @@ int main() {
     std::string out;
     codec.decode(out, encoded);
     if (out == test) {
-        std::cout << "Correct\n";
+        std::cout << "Correct" << std::endl;
     } else {
-        std::cout << "Failed\n";
-        std::cout << test << '\n' << encoded << '\n';
+        std::cout << "Failed" << std::endl;
     }
 
     return 0;
